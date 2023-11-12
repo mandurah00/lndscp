@@ -84,18 +84,27 @@ and distribute the ZIP file.
 
 ### Steps to add db
 
-1. We need to have the database driver in the root folder of our project.  You can get the database driver searching online and download it from the database company.  Since we are using MySQL, google “mysql java driver”.  It may change, but my top search result is “MySQL Connector/J” located at https://www.mysql.com/products/connector/   Then, click on the Download link next to “JDBC Driver for MySQL”.  Choose the operating system as “Platform Independent” and then click on the download for the “Zip Archive”. On the next page, I click the link “No thanks, just start my download.”  Once the file downloads, extract it and find the mysql-connector-java-xxxx.jar file (xxxx part will change).  This is the only file that you will need!
+#### (circa 2020)
+
+1. We need to have the database driver in the root folder of our project.  You can get the database driver searching online and download it from the database company.  Since we are using MySQL, google “mysql java driver”.  It may change, but my top search result is “MySQL Connector/J” located at https://www.mysql.com/products/connector/   Then, click on the Download link next to “JDBC Driver for MySQL”.  Choose the operating system as “Platform Independent” and then click on the download for the “Zip Archive”. On the next page, I click the link “No thanks, just start my download.”  Once the file downloads, extract it and find the mysql-connector-java-xxxx.jar file (xxxx part will change).
 
 2. Open your project’s folder.  Copy the mysql-connector-java-xxxx.jar file to the root folder (base folder).  Once the file is there, open your NetBeans project.  Click the  +  sign next to the project name.  Then, right-click on Libraries.  Choose “Add Jar/Folder”.  Browse and find your project’s folder.  Once you find the folder, you will see the mysql-connector-java-xxxx.jar file listed.  Double-click on the file or select it and then click Open to add the MySQL driver to your project library.
 
 3. Open your Visio Class diagram from our design phase.  We need to update the DataIO class to match our Visio Class diagram.  Remember, DataIO stands for “Data Input and Output”.  Since we are connecting with a database, we will need to add our connection variables as constants to the top of the class.
 
-4. If you made the password “github123” and called your schema/database “lndscp”, then your constants should be:  private final String DATABASE_NAME = "lndscp"; private final String CONNECTION_STRING =            "jdbc:mysql://localhost:3306/" + DATABASE_NAME; private final String USER_NAME = "root"; private final String PASSWORD = "github123";
+4. If you made the password “github123” and called your schema/database “lndscp”, then your constants should be:
+ ```sh
+ private final String DATABASE_NAME = "lndscp";
+ private final String CONNECTION_STRING = "jdbc:mysql://localhost:3306/" + DATABASE_NAME;
+ private final String USER_NAME = "root";
+ private final String PASSWORD = "github123";
+ ```
 
 5. The DataIO class is set up to read and write to files.  Let’s update it so it reads and writes to the database.  Delete the import statements at the top and replace them with import statements for database access. The asterisk (‘*’) tells Java to import all classes that are referenced from the java.sql package.  We also need to return an ArrayList, so let’s import that class as well from the java.util package.
-
-import java.sql.*;
-import java.util.ArrayList;
+  ```sh
+  import java.sql.*;
+  import java.util.ArrayList;
+  ```
 
 6. Delete the code in your methods so we can add the database input/output code, including the throws statements at the end of the method headers.
 
@@ -106,32 +115,216 @@ import java.util.ArrayList;
 9. You should have a database (Schema) called lndscp.  If you do not have one, click the barrel icon (“Create new schema in the connected server”) that is located on the Taskbar at the top to create it.  Open the lndscp database/schema by clicking the triangle next to it.  Open the Tables by clicking the triangle next to it so you can see the existing tables.  Right-click on Tables and choose “Create Table”.  Create the following table and call it landscape.  Notice that CustomerID is a primary key and it has Auto Increment turned on.
 
 10. Go back to your DataIO class.  In the addCustomer( ) method, write code to:
-    Check for the database driver
-    Connect to the database
-    Add the Customer record to the landscape table
-    Close the database connection
+    a. Check for the database driver
+    b. Connect to the database
+    c. Add the Customer record to the landscape table
+    d. Close the database connection
 
-Remember to throw the exceptions so the GUI class can report any possible issues!  Also, remember to use a PreparedStatement to help prevent hacking. 
+    Remember to throw the exceptions so the GUI class can report any possible issues!  Also, remember to use a PreparedStatement to help prevent hacking.
 
+```sh
+public int addCustomer(Customer cust) throws ClassNotFoundException, SQLException
+{
+	//check for driver
+	Class.forName("com.mysql.cj.jdbc.Driver");
+
+	//connect to database 
+	Connection conn = DriverManager.getConnection(CONNECTION_STRING,
+		USER_NAME, PASSWORD);
+
+	//add record 
+	String strSQL = "INSERT INTO landscape (CustomerName, CustomerAddress, "
+		+ "LandscapeType, YardLength, YardWidth, LandscapeCost) "
+		+ "VALUES(?, ?, ?, ?, ?, ?)";
+	PreparedStatement pstmt = conn.prepareStatement(strSQL,
+		Statement.RETURN_GENERATED_KEYS);
+	pstmt.setString(1, cust.getName());
+	pstmt.setString(2, cust.getAddress());
+	pstmt.setString(3, cust.getYardType());
+	pstmt.setDouble(4, cust.getLength());
+	pstmt.setDouble(5, cust.getWidth());
+	pstmt.setDouble(6, cust.getTotalCost());
+
+	// execute the prepared statement
+	pstmt.executeUpdate();
+
+	// get the generated primary key
+	ResultSet results = pstmt.getGeneratedKeys();
+	int generatedID = -1;
+       
+	// get generated id if possible
+	if (results.next())
+		generatedID = results.getInt(1);
+       
+	//close connection 
+	conn.close();
+
+	return generatedID;
+}
+```
+    
 11. Go to your LandscapeGUI.java file.  Go to the top of your code window and replace the IOException import with an import for java.sql.*.
 
 12. Update you submitOrder( ) method so that it looks for SQLExceptions instead of IOExceptions.  In addition, we need to look for the ClassNotFoundException in case we do not have the database driver installed correctly.
 
+```sh
+private void submitOrder()
+{
+	if (validateInputs() == false)
+	{
+	return;    // end the method if validation failed
+	}
+
+	Customer cust = createCustomer();
+
+	try
+	{
+		DataIO data = new DataIO(); // create DataIO object
+		data.addCustomer(cust);
+		loadCustomers();  // load all customers
+		lstCustomers.setSelectedIndex( customerList.size() - 1 );  // select last item
+
+		// reset for the next customer
+		reset();
+
+		//move to the client orders tab
+		tabMain.setSelectedIndex(2);
+	}
+	catch (SQLException ex)
+	{
+		JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(),
+		"Database Error", JOptionPane.ERROR_MESSAGE);
+	}
+	catch (ClassNotFoundException ex)
+	{
+		JOptionPane.showMessageDialog(this, "Driver Not Found Error: " + ex.getMessage(),
+		"Database Driver Error", JOptionPane.ERROR_MESSAGE);
+	}
+}
+```
+    
 13. If you use a block comment on your btnDeleteActionPerformed( ) method and your loadCustomers( ) method, you can test your submitOrder( ) method.  For example, put a  \*  as the first line of your loadCustomers method and a  *\  as the last line.
+
+```sh
+private void loadCustomers()
+{
+	/*
+	// the code will be “commented out” and ignored by Java
+	*/
+} 
+```
 
 14. Go to your DataIO class.  In order to read data from the database, we need to connect to the database, read the records, and then close the connection. As we read the records, let’s create Customer objects and then add them to the ArrayList.  Finally, we need to return the ArrayList.
 
+```sh
+public ArrayList<Customer> getCustomers() throws SQLException
+{
+	// create the ArrayList so we have something to return
+	ArrayList<Customer> list = new ArrayList<Customer>();
+
+	//connect to database 
+	Connection conn = DriverManager.getConnection(CONNECTION_STRING,
+	USER_NAME, PASSWORD);
+    
+	Statement statement = conn.createStatement();
+	String SQL = "Select * FROM landscape";
+	ResultSet rs = statement.executeQuery(SQL);
+    
+	while (rs.next())
+	{
+		// create Customer object and load the attributes
+		Customer client = new Customer();
+		client.setCustomerID(rs.getInt(1));
+		client.setName(rs.getString(2));
+		client.setAddress(rs.getString(3));
+		client.setYardType(rs.getString(4));
+		client.setLength(rs.getDouble(5));
+		client.setWidth(rs.getDouble(6));
+		client.setTotalCost(rs.getDouble(7));
+              
+		// add the Customer object to our list
+		list.add(client);			
+	}
+    
+	// close the database connection
+	conn.close();
+    
+	// return the ArrayList
+	return list;
+}    
+```
+
 15. Save All and then go to your LandscapeGUI.java file.  Update you loadCustomers( ) method so that it looks for SQLExceptions instead of IOExceptions.
 
-16. Run your application.  Click on the Customer List tab.  Click on the Load List button.  Does it work?  So far, so good!
+```sh
+private void loadCustomers()
+{
+	try
+	{
+		DataIO data = new DataIO(); // create DataIO object
+		ArrayList<Customer> customers = data.getCustomers();
+
+		// clear out the DefaultListModel and textarea
+		customerList.clear();
+		txaOrderInfo.setText("");
+
+		// copy objects from the ArrayList over to the DefaultListModel
+		customerList.addAll(customers);
+	}
+	catch (SQLException ex)
+	{
+		JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(),
+			"Database Error", JOptionPane.ERROR_MESSAGE);
+	}
+}
+```
+
+16. Run your application.  Click on the Customer List tab.  Click on the Load List button.  Ensure it works.
 
 17. We need to be able to delete a customer.  Go to your DataIO class.  Change the method header so we can delete the customer based on the customer’s ID number.  In your deleteCustomer( ) method, connect to the database. Then, issue the DELETE FROM command.  Finally, close the connection to the database.
 
+```sh
+public void deleteCustomer(int customerID) throws SQLException
+{
+	// connect to the database
+	Connection conn = DriverManager.getConnection(CONNECTION_STRING, USER_NAME, PASSWORD);
+        
+	// delete the record
+	String SQL = "DELETE FROM landscape WHERE CustomerID = ?";
+	PreparedStatement pstmt = conn.prepareStatement(SQL);
+	pstmt.setInt(1, customerID);
+	pstmt.execute();
+
+	// close the database connection
+	conn.close();
+}
+```
+
 18. Let’s update our Delete Customer button event code in the GUI.  Save All and then go to the code and get the selected Customer object.  Then, create a DataIO object and delete the customer based on the customer’s ID number.  Finally, load the current customers using the loadCustomers( ) method.
 
-19. Run your application and test it, including the menu.  You can now read and write to databases.
+```sh
+try
+{
+	// get the selected object
+	Customer old = lstCustomers.getSelectedValue();
 
-* If you're having problems with the database instruction, feel free to email me and I'll do my best to respond at my soonest opportunity with the original instruction.
+	// if something is selected, delete it and clear the details textarea
+	if (old != null)
+	{
+		DataIO data = new DataIO();
+		data.deleteCustomer(old.getCustomerID());   // get the name only
+		txaCustomerInfo.setText("");
+		loadCustomers();
+	}
+}
+catch (SQLException ex)
+{
+	JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(),
+		"Database Error", JOptionPane.ERROR_MESSAGE);
+}
+```
+
+19. Run your application and test it, including the menu.  You can now read and write to databases.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
