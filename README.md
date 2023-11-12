@@ -6,7 +6,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/mandurah00/lndscp">
-    <img src="https://danwilson.dev/meta/ReadMe_lndscp.gif" alt="banner">
+    <img src="https://danwilson.dev/meta/ReadMe_lndscpHdr.gif" alt="banner">
   </a>
 
   <h1 align="center">Landscaping Application</h1>
@@ -204,7 +204,7 @@ Project Link: [https://github.com/mandurah00/al26menu](https://github.com/mandur
 [license-url]: https://github.com/mandurah00/al26menu/blob/main/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/idanwilson/
-[product-screenshot]: https://danwilson.dev/meta/ReadMe-lndscpWireDiaDb.gif
+[product-screenshot]: https://danwilson.dev/meta/ReadMe-lndscpWDD.gif
 [Java-shield]: https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white
 [Java-url]: https://www.java.com/
 [MySQL-shield]: https://img.shields.io/static/v1?style=for-the-badge&message=MySQL&color=4479A1&logo=MySQL&logoColor=FFFFFF&label=
